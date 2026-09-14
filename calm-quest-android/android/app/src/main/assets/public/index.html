@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#4F9C8B">
+<title>Calm Quest — A Gentle Matching Journey</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<!-- Packaged app build: no external font/network calls, so the app works fully offline
+     and needs no INTERNET permission. Rounded system fonts are used instead of Google Fonts. -->
+<style>
+  @property --grad-from { syntax: '<color>'; inherits: true; initial-value: #EAF3EC; }
+  @property --grad-to { syntax: '<color>'; inherits: true; initial-value: #E4F1F6; }
+  @property --accent { syntax: '<color>'; inherits: true; initial-value: #4F9C8B; }
+  @property --accent-soft { syntax: '<color>'; inherits: true; initial-value: #DCEFE9; }
+
+  :root{
+    --font-display: 'Baloo 2', system-ui, sans-serif;
+    --font-body: 'Quicksand', system-ui, sans-serif;
+    --ink: #2E3A3A;
+    --ink-soft: #62726F;
+    --surface: #FBFAF6;
+    --surface-2: #F2F0E7;
+    --shadow-soft: 0 10px 28px rgba(46,58,58,0.12);
+    --shadow-tile: 0 4px 10px rgba(46,58,58,0.14);
+    --radius-lg: 26px;
+    --radius-md: 18px;
+    --radius-sm: 12px;
+    --grad-from: #EAF3EC;
+    --grad-to: #E4F1F6;
+    --accent: #4F9C8B;
+    --accent-soft: #DCEFE9;
+    --gold: #E8C468;
+    --ease: cubic-bezier(.22,.61,.36,1);
+    transition: --grad-from .9s ease, --grad-to .9s ease, --accent .9s ease, --accent-soft .9s ease;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:var(--font-body);
+    color:var(--ink);
+    background: linear-gradient(160deg, var(--grad-from), var(--grad-to));
+    overflow-x:hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,h2,h3{ font-family:var(--font-display); margin:0; font-weight:700; }
+  p{ margin:0; }
+  button{ font-family:var(--font-body); border:none; background:none; cursor:pointer; color:inherit; }
+  button:focus-visible, [tabindex]:focus-visible{ outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+  #bg{ position:fixed; inset:0; z-index:-1; overflow:hidden; }
+  .blob{ position:absolute; border-radius:50%; filter: blur(40px); opacity:.55; background: var(--accent-soft); animation: float 22s ease-in-out infinite; }
+  .blob.b1{ width:280px; height:280px; top:-60px; left:-60px; animation-duration: 26s; }
+  .blob.b2{ width:220px; height:220px; bottom:-40px; right:-40px; animation-duration: 20s; animation-delay: -6s; }
+  .blob.b3{ width:180px; height:180px; top:40%; right:10%; animation-duration: 30s; animation-delay: -12s; }
+  @keyframes float{
+    0%,100%{ transform: translate(0,0) scale(1); }
+    50%{ transform: translate(20px,-26px) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .blob{ animation: none; }
+  }
+
+  .overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px; background:linear-gradient(160deg,var(--grad-from),var(--grad-to)); z-index:50; }
+  .spinner{ width:44px; height:44px; border-radius:50%; border:4px solid var(--accent-soft); border-top-color:var(--accent); animation:spin 1s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .overlay p{ font-family:var(--font-display); color:var(--ink-soft); font-size:15px; }
+
+  main#app{ max-width:520px; margin:0 auto; padding: 0 0 40px; position:relative; }
+  .screen{ display:flex; flex-direction:column; }
+
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; gap:10px;
+    padding: 14px 16px;
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .topbar .wordmark{ font-size:19px; display:flex; align-items:center; gap:6px; color:var(--ink); }
+  .topbar .spacer{ flex:1; }
+  .pill{
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface); border-radius:999px;
+    padding:7px 13px; font-weight:600; font-size:14px;
+    box-shadow: var(--shadow-tile);
+    color: var(--ink);
+  }
+  .icon-btn{
+    width:38px; height:38px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--surface); box-shadow: var(--shadow-tile);
+    font-size:18px; flex-shrink:0;
+    transition: transform .25s var(--ease);
+  }
+  .icon-btn:active{ transform: scale(.9); }
+
+  .hero{ padding: 22px 22px 8px; text-align:center; }
+  .hero h1{ font-size: 30px; color: var(--ink); }
+  .hero .tag{ margin-top:6px; color:var(--ink-soft); font-size:14.5px; line-height:1.5; }
+  .cta-row{ margin-top:16px; }
+  .btn{
+    font-family:var(--font-display); font-weight:600; font-size:15px;
+    padding:13px 22px; border-radius:999px; display:inline-flex; align-items:center; gap:8px;
+    transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+    box-shadow: var(--shadow-soft);
+  }
+  .btn:active{ transform: scale(.96); }
+  .btn-primary{ background: var(--accent); color:#fff; }
+  .btn-secondary{ background: var(--surface); color:var(--ink); }
+  .btn-ghost{ background: transparent; color: var(--ink-soft); box-shadow:none; text-decoration:underline; }
+  .btn-block{ width:100%; justify-content:center; }
+  .btn[disabled]{ opacity:.45; pointer-events:none; }
+
+  .powers-summary{
+    margin: 16px 20px 0; padding: 12px 14px; border-radius: var(--radius-md);
+    background: var(--surface); box-shadow: var(--shadow-tile);
+    display:flex; align-items:center; justify-content:space-around; gap:6px;
+  }
+  .power-chip{ display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; color:var(--ink-soft); }
+  .power-chip .emo{ font-size:20px; }
+  .power-chip b{ color:var(--ink); font-size:13px; }
+
+  .world-strip{ display:flex; gap:12px; overflow-x:auto; padding: 20px 20px 6px; scrollbar-width:none; }
+  .world-strip::-webkit-scrollbar{ display:none; }
+  .world-btn{
+    flex-shrink:0; width:72px; display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:10px 6px 8px; border-radius: var(--radius-md);
+    background: var(--surface); box-shadow: var(--shadow-tile);
+    opacity:.55; transition: opacity .25s var(--ease), transform .2s var(--ease);
+  }
+  .world-btn.unlocked{ opacity:1; }
+  .world-btn.active{ box-shadow: 0 0 0 2.5px var(--accent), var(--shadow-tile); }
+  .world-btn:active{ transform: scale(.94); }
+  .world-btn .emo{ font-size:24px; }
+  .world-btn .lbl{ font-size:10.5px; font-weight:600; color:var(--ink-soft); text-align:center; line-height:1.2; }
+
+  .path-heading{ padding: 14px 22px 2px; }
+  .path-heading h2{ font-size:19px; }
+  .path-heading p{ color:var(--ink-soft); font-size:13.5px; margin-top:3px; }
+
+  .path-wrap{ padding: 10px 0 6px; }
+  .node-row{ display:flex; padding: 6px 12%; }
+  .node-row.pos-0{ justify-content:flex-start; }
+  .node-row.pos-1{ justify-content:center; }
+  .node-row.pos-2{ justify-content:flex-end; }
+  .node-row.pos-3{ justify-content:center; }
+  .node{
+    width:56px; height:56px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; position:relative;
+    background: var(--surface); box-shadow: var(--shadow-tile);
+    font-family:var(--font-display); font-weight:600; font-size:16px; color: var(--ink-soft);
+    transition: transform .2s var(--ease);
+  }
+  .node:active{ transform: scale(.92); }
+  .node.locked{ opacity:.5; color: var(--ink-soft); }
+  .node.done{ background: var(--accent-soft); color: var(--ink); }
+  .node.current{ background: var(--accent); color:#fff; animation: pulse 1.8s ease-in-out infinite; }
+  .node.milestone{ width:62px; height:62px; box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-tile); }
+  .node.gate{ width:78px; height:78px; flex-direction:column; gap:1px; font-size:12px; background: linear-gradient(160deg, var(--accent), var(--accent-soft)); color:#fff; }
+  .node.gate .glyph{ font-size:22px; }
+  .node .badge{ position:absolute; top:-4px; right:-4px; font-size:13px; }
+  @keyframes pulse{
+    0%,100%{ box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+    50%{ box-shadow: 0 0 0 10px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce){ .node.current{ animation:none; } }
+
+  /* game screen */
+  .phase-hint{ text-align:center; padding: 10px 24px 0; color: var(--ink-soft); font-size:13.5px; }
+  .powers-dock{ display:flex; justify-content:center; gap:12px; padding: 14px 20px 4px; }
+  .power-btn{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:var(--surface); border-radius: var(--radius-md); padding:9px 14px;
+    box-shadow: var(--shadow-tile); min-width:56px;
+    transition: transform .18s var(--ease);
+  }
+  .power-btn:active{ transform: scale(.92); }
+  .power-btn[disabled]{ opacity:.4; }
+  .power-btn .emo{ font-size:21px; }
+  .power-btn .count{ font-size:11.5px; font-weight:700; color: var(--ink-soft); }
+
+  .board-wrap{ display:flex; justify-content:center; padding: 16px 18px 4px; }
+  .board{ display:grid; gap: clamp(7px,2vw,12px); width:100%; max-width:440px; }
+  .card{ aspect-ratio:1; perspective:800px; }
+  .card-inner{
+    position:relative; width:100%; height:100%; transition: transform .5s var(--ease);
+    transform-style:preserve-3d; border-radius: var(--radius-sm);
+  }
+  .card.flipped .card-inner{ transform: rotateY(180deg); }
+  .card-face{
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius: var(--radius-sm); display:flex; align-items:center; justify-content:center;
+    box-shadow: var(--shadow-tile);
+  }
+  .card-face.front{ background: linear-gradient(160deg, var(--accent), var(--accent-soft)); }
+  .card-face.front .mark{ color:#fff; opacity:.75; font-size: clamp(18px,5vw,26px); }
+  .card-face.back{ background: var(--surface); transform: rotateY(180deg); padding:4px; text-align:center; overflow:hidden; }
+  .card.matched .card-face.back{ background: var(--accent-soft); }
+  .card.matched .card-inner{ animation: pop .4s var(--ease); }
+  @keyframes pop{ 0%{ transform: rotateY(180deg) scale(1); } 40%{ transform: rotateY(180deg) scale(1.12); } 100%{ transform: rotateY(180deg) scale(1); } }
+  .card.shake .card-inner{ animation: shake .4s var(--ease); }
+  @keyframes shake{ 0%,100%{ transform: rotateY(180deg) translateX(0); } 30%{ transform: rotateY(180deg) translateX(-5px); } 60%{ transform: rotateY(180deg) translateX(5px); } }
+  @media (prefers-reduced-motion: reduce){
+    .card-inner{ transition: transform .01s; }
+    .card.matched .card-inner, .card.shake .card-inner{ animation:none; }
+  }
+
+  .tile-emoji{ font-size: clamp(22px,7.2vw,36px); line-height:1; }
+  .tile-text{ font-family:var(--font-display); font-weight:700; color:var(--ink); }
+  .tile-text.numeral{ font-size: clamp(20px,6.6vw,32px); }
+  .tile-text.expr{ font-size: clamp(14px,4.6vw,20px); }
+  .tile-count{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; line-height:1.15; padding:2px; }
+
+  .progress-note{ text-align:center; color:var(--ink-soft); font-size:13px; padding: 12px 20px 4px; }
+
+  /* modals */
+  .modal-backdrop{
+    position:fixed; inset:0; background: rgba(46,58,58,0.32); z-index:40;
+    display:flex; align-items:flex-end; justify-content:center; backdrop-filter: blur(2px);
+  }
+  @media (min-width:560px){ .modal-backdrop{ align-items:center; } }
+  .modal{
+    background: var(--surface); border-radius: 28px 28px 0 0; padding: 28px 26px 30px;
+    width:100%; max-width:480px; box-shadow: 0 -12px 40px rgba(0,0,0,.18);
+    position:relative; overflow:hidden;
+    animation: rise .4s var(--ease);
+  }
+  @media (min-width:560px){ .modal{ border-radius:28px; animation: riseCenter .4s var(--ease); } }
+  @keyframes rise{ from{ transform: translateY(24px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  @keyframes riseCenter{ from{ transform: translateY(10px) scale(.97); opacity:0; } to{ transform:none; opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ .modal{ animation:none; } }
+  .modal h2{ font-size:22px; text-align:center; }
+  .modal .sub{ text-align:center; color:var(--ink-soft); font-size:14px; margin-top:8px; line-height:1.5; }
+  .modal .stats{ display:flex; justify-content:center; gap:22px; margin:20px 0; }
+  .modal .stat{ text-align:center; }
+  .modal .stat .n{ font-family:var(--font-display); font-size:22px; color:var(--accent); }
+  .modal .stat .l{ font-size:11.5px; color:var(--ink-soft); }
+  .modal .earned-powers{ display:flex; justify-content:center; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+  .modal .earned-powers span{ background:var(--accent-soft); border-radius:999px; padding:7px 12px; font-size:13px; font-weight:600; }
+  .modal .actions{ display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+  .modal .toggle-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 2px; border-bottom:1px solid var(--surface-2); }
+  .modal .toggle-row:last-of-type{ border-bottom:none; }
+  .modal .toggle-row .lbl{ font-size:14.5px; font-weight:600; }
+  .modal .toggle-row .desc{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .switch{ width:46px; height:26px; border-radius:999px; background:var(--surface-2); position:relative; flex-shrink:0; transition: background .2s; }
+  .switch.on{ background: var(--accent); }
+  .switch .dot{ position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition: transform .2s var(--ease); box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .switch.on .dot{ transform: translateX(20px); }
+  .close-x{ position:absolute; top:14px; right:16px; font-size:20px; color:var(--ink-soft); }
+
+  .confetti-layer{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .confetti-piece{ position:absolute; top:-24px; font-size:20px; animation: fall linear forwards; }
+  @keyframes fall{ to{ transform: translateY(340px) rotate(200deg); opacity:0; } }
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform: translateX(-50%) translateY(120%);
+    background: var(--ink); color:#fff; padding:11px 18px; border-radius:999px;
+    font-size:13.5px; z-index:60; transition: transform .35s var(--ease); box-shadow: var(--shadow-soft);
+    max-width: 86vw; text-align:center;
+  }
+  .toast.show{ transform: translateX(-50%) translateY(0); }
+
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<div id="loading" class="overlay">
+  <div class="spinner" aria-hidden="true"></div>
+  <p>Growing your garden…</p>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<main id="app" hidden>
+
+  <section id="screen-home" class="screen">
+    <div class="topbar">
+      <div class="wordmark">🍃 Calm Quest</div>
+      <div class="spacer"></div>
+      <div class="pill" id="home-points">⭐ 0</div>
+      <button class="icon-btn" id="btn-mute" aria-label="Toggle sound">🔊</button>
+      <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙️</button>
+    </div>
+
+    <div class="hero">
+      <h1>Calm Quest</h1>
+      <p class="tag">A gentle matching journey for busy grown-ups and curious young minds. No timers, no fails — just a quiet moment to play.</p>
+      <div class="cta-row">
+        <button class="btn btn-primary" id="btn-continue">Continue → Level <span id="continue-level">1</span></button>
+      </div>
+    </div>
+
+    <div class="powers-summary" id="powers-summary"></div>
+
+    <div class="world-strip" id="world-strip"></div>
+
+    <div class="path-heading">
+      <h2 id="world-title">World 1 · Sunrise Meadow</h2>
+      <p id="world-blurb">Soft first steps into the garden.</p>
+    </div>
+    <div class="path-wrap" id="path-wrap"></div>
+  </section>
+
+  <section id="screen-game" class="screen" hidden>
+    <div class="topbar">
+      <button class="icon-btn" id="btn-back-home" aria-label="Back to map">🏠</button>
+      <div class="pill" id="game-level-label">Level 1</div>
+      <div class="spacer"></div>
+      <div class="pill" id="game-points">⭐ 0</div>
+      <button class="icon-btn" id="btn-mute-2" aria-label="Toggle sound">🔊</button>
+    </div>
+    <p class="phase-hint" id="phase-hint">Find the matching pairs 🌿</p>
+    <div class="powers-dock" id="powers-dock"></div>
+    <div class="board-wrap"><div class="board" id="board"></div></div>
+    <p class="progress-note" id="progress-note">Pairs found: 0 / 0</p>
+  </section>
+
+</main>
+
+<div id="modal-intro" class="modal-backdrop" hidden>
+  <div class="modal">
+    <h2>Welcome to Calm Quest 🌸</h2>
+    <p class="sub">Flip two cards to find a matching pair. Clear the board to finish a level — there's no clock and no way to fail, so take all the time you like.<br><br>Clearing levels earns you gentle Powers (👀🔀⭐🍀) that make trickier levels easier. Play a level or two on a break, or settle in for longer. It's your garden.</p>
+    <div class="actions">
+      <button class="btn btn-primary btn-block" id="btn-intro-start">Let's play</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-complete" class="modal-backdrop" hidden>
+  <div class="modal">
+    <div class="confetti-layer" id="confetti-layer"></div>
+    <h2 id="complete-title">Lovely work! 🌿</h2>
+    <p class="sub" id="complete-sub">You cleared the level.</p>
+    <div class="stats">
+      <div class="stat"><div class="n" id="stat-points">+0</div><div class="l">Zen Points</div></div>
+      <div class="stat"><div class="n" id="stat-total">0</div><div class="l">Total</div></div>
+    </div>
+    <div class="earned-powers" id="earned-powers"></div>
+    <div class="actions">
+      <button class="btn btn-primary btn-block" id="btn-next-level">Next level</button>
+      <button class="btn btn-secondary btn-block" id="btn-to-map">Back to world map</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-finale" class="modal-backdrop" hidden>
+  <div class="modal">
+    <h2>A full circle of calm 🌸</h2>
+    <p class="sub">You've matched your way through all 999 gardens. Thank you for taking this quiet journey — feel free to wander back through any world, any time.</p>
+    <div class="actions">
+      <button class="btn btn-primary btn-block" id="btn-finale-close">Back to world map</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-settings" class="modal-backdrop" hidden>
+  <div class="modal">
+    <button class="close-x" id="btn-settings-close" aria-label="Close">✕</button>
+    <h2>Settings</h2>
+    <div class="toggle-row">
+      <div><div class="lbl">Sound</div><div class="desc">Soft chimes on matches</div></div>
+      <div class="switch" id="switch-mute" role="switch" aria-checked="false"><div class="dot"></div></div>
+    </div>
+    <div class="toggle-row">
+      <div><div class="lbl">Big tiles</div><div class="desc">Larger cards for little hands</div></div>
+      <div class="switch" id="switch-big" role="switch" aria-checked="false"><div class="dot"></div></div>
+    </div>
+    <div class="actions" style="margin-top:18px;">
+      <button class="btn btn-secondary btn-block" id="btn-reset">Reset progress</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Data ---------------- */
+
+  const THEMES = [
+    { name:"Sunrise Meadow", from:"#FFF6DF", to:"#EAF6D8", accent:"#D9A23B", soft:"#F3E7C4", icons:["🌼","🌻","🐝","🦋","🌿","🐞","🌾","🍄","🐛","🌸"] },
+    { name:"Ocean Breeze", from:"#E3F6F5", to:"#D6ECFB", accent:"#3FA7B3", soft:"#CDEDEA", icons:["🐬","🐠","🐚","🌊","🦀","🐳","🦑","🐡","⚓","🪸"] },
+    { name:"Bamboo Forest", from:"#EAF4E7", to:"#DCEFE0", accent:"#5C9C6C", soft:"#D3EAD6", icons:["🐼","🎋","🍃","🐦","🍵","🦉","🌱","🐿️","🪶","🌳"] },
+    { name:"Cherry Blossom", from:"#FDEFF3", to:"#FCE4EC", accent:"#D9769A", soft:"#F6D4E1", icons:["🌸","🎏","🍡","🏮","🍵","🦢","🎐","🐇","🍰","🌺"] },
+    { name:"Starry Night", from:"#E9EAF6", to:"#DCE0F3", accent:"#6F76BE", soft:"#D6D8EF", icons:["🌙","⭐","✨","🌠","🦉","🪐","🌌","🕯️","🧸","🦋"] },
+    { name:"Citrus Grove", from:"#FFF7E0", to:"#FFEFD1", accent:"#E89A3C", soft:"#F9E1B8", icons:["🍊","🍋","🍑","🍉","🍇","🍍","🥭","🍒","🍈","🌴"] },
+    { name:"Rainy Day", from:"#EAF1F5", to:"#DCE7EE", accent:"#6E9FB5", soft:"#D2E3EA", icons:["☔","🌧️","🌈","💧","🐌","🍄","🦆","🥾","🧦","🍂"] },
+    { name:"Desert Bloom", from:"#FDF3E3", to:"#F8E7D0", accent:"#D98E4B", soft:"#F1D9B8", icons:["🌵","🐫","🦂","🏜️","🌅","🦎","🪶","🌙","🍯","🐾"] },
+    { name:"Snow Peaks", from:"#F0F6FA", to:"#E4EFF6", accent:"#6FAAC9", soft:"#D8E9F1", icons:["❄️","⛄","🏔️","🐧","🧤","🦌","🌨️","🧣","🐻","🎿"] },
+    { name:"Meadow Bugs", from:"#F1F8E8", to:"#E6F3D9", accent:"#86AD4C", soft:"#DDEDC5", icons:["🐞","🦋","🐝","🐛","🕷️","🐜","🌼","🍀","🐌","🌾"] },
+    { name:"Candy Land", from:"#FDF0F7", to:"#F9E3F0", accent:"#DD7EB0", soft:"#F5D3E7", icons:["🍬","🍭","🧁","🍩","🍫","🍪","🍰","🍨","🍮","🍡"] },
+    { name:"Forest Friends", from:"#F0EEE3", to:"#E7E2D2", accent:"#93815E", soft:"#DDD5BE", icons:["🦊","🦉","🦌","🐿️","🐇","🍂","🌰","🍄","🌲","🦔"] },
+    { name:"Coral Reef", from:"#E4F7F4", to:"#D4EFEA", accent:"#2FA894", soft:"#C6E9E1", icons:["🐠","🐡","🦑","🐙","🪸","🦀","🐢","🌊","🐚","⭐"] },
+    { name:"Autumn Leaves", from:"#FBEFE2", to:"#F5DFC7", accent:"#C9793A", soft:"#EDD0AC", icons:["🍁","🍂","🎃","🌰","🦔","🍄","🦉","🌾","🍎","🕸️"] },
+    { name:"Space Voyage", from:"#E7E9F5", to:"#D8DCF0", accent:"#6067B0", soft:"#CDD1EA", icons:["🚀","🪐","🌟","🛰️","👩‍🚀","🌙","☄️","🔭","👽","🌌"] },
+    { name:"Garden Party", from:"#F4F8E9", to:"#EAF3D6", accent:"#7FAE5A", soft:"#DDEBC2", icons:["🦋","🌷","🐝","🎀","🧺","🌼","🍓","🌸","🕊️","🎈"] },
+    { name:"Mountain Trail", from:"#EDF2E9", to:"#DFEADA", accent:"#5E8C5A", soft:"#D2E2CD", icons:["⛰️","🌲","🏕️","🦅","🥾","🔥","🪵","🌄","🐾","🎒"] },
+    { name:"Tropical Isle", from:"#E5F7F0", to:"#D3F0E1", accent:"#2FA07E", soft:"#C3E8D6", icons:["🌴","🍍","🥥","🦩","🌺","🐚","🌊","🦜","☀️","🐢"] },
+    { name:"Winter Wonderland", from:"#EFF4FA", to:"#E1EAF6", accent:"#6C87B7", soft:"#D4DFF0", icons:["☃️","🧤","🧣","❄️","🦌","🎿","⛸️","🌟","🍬","🕯️"] },
+    { name:"Zen Garden", from:"#EFEFE9", to:"#E3E6DD", accent:"#7D8F73", soft:"#D8DCCF", icons:["🪷","🎍","🕊️","🍵","🪨","🌿","🧘","🎋","🌸","🍃"] }
+  ];
+
+  const ALPHABET_ICONS = {
+    A:"🍎",B:"🐻",C:"🐱",D:"🐬",E:"🐘",F:"🐸",G:"🍇",H:"🏠",I:"🍦",J:"🧃",
+    K:"🔑",L:"🦁",M:"🌙",N:"🎵",O:"🐙",P:"🐼",Q:"👑",R:"🌈",S:"⭐",T:"🐯",
+    U:"☂️",V:"🎻",W:"🐋",X:"❌",Y:"🪀",Z:"🦓"
+  };
+
+  const SHAPES_POOL = ["🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪","🟥","🟧","🟨","🟩","🟦","🟪","🟫","⬛","⬜","🔶","🔷","🔸","🔹","🔺","🔻","⭐","💠"];
+
+  const PHASE_DEFS = [
+    { name:"pictures", length:20, base:2, growEvery:4, max:9,  hint:"Find the matching pairs 🌿" },
+    { name:"numbers",  length:20, base:3, growEvery:3, max:9,  hint:"Match each number to its count ⭐" },
+    { name:"letters",  length:20, base:3, growEvery:3, max:12, hint:"Match each letter to its picture 🔤" },
+    { name:"shapes",   length:15, base:4, growEvery:3, max:12, hint:"Match the shapes and colours 🔷" },
+    { name:"math",     length:20, base:4, growEvery:3, max:8,  hint:"Match each sum to its answer ➕" },
+    { name:"mixed",    length:25, base:5, growEvery:3, max:12, hint:"A gentle mix — match them all 🌈" }
+  ];
+  const CYCLE_LENGTH = PHASE_DEFS.reduce((s,p)=>s+p.length,0); // 120
+  const TOTAL_LEVELS = 999;
+  const LEVELS_PER_WORLD = 50;
+
+  const POWER_INFO = {
+    peek:      { emo:"👀", name:"Peek",        desc:"Briefly reveal every card" },
+    reshuffle: { emo:"🔀", name:"Reshuffle",   desc:"Shuffle the unmatched cards" },
+    focus:     { emo:"⭐", name:"Focus Boost", desc:"Double points this level" },
+    lucky:     { emo:"🍀", name:"Lucky Bloom", desc:"Auto-match one pair" }
+  };
+  const POWER_KEYS = Object.keys(POWER_INFO);
+
+  const STORAGE_KEY = "calmquest_progress_v1";
+
+  /* ---------------- Helpers ---------------- */
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      const tmp=a[i]; a[i]=a[j]; a[j]=tmp;
+    }
+    return a;
+  }
+  function range(a,b){ const r=[]; for(let i=a;i<=b;i++) r.push(i); return r; }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function randomPowerType(){ return POWER_KEYS[Math.floor(Math.random()*POWER_KEYS.length)]; }
+
+  function getPhaseInfo(posInCycle){
+    let acc = 0;
+    for(const p of PHASE_DEFS){
+      if(posInCycle < acc + p.length) return Object.assign({}, p, { posInPhase: posInCycle-acc });
+      acc += p.length;
+    }
+    return Object.assign({}, PHASE_DEFS[PHASE_DEFS.length-1], { posInPhase:0 });
+  }
+
+  function pairsForLevel(level){
+    const posInCycle = (level-1) % CYCLE_LENGTH;
+    const cycleIndex = Math.floor((level-1) / CYCLE_LENGTH);
+    const info = getPhaseInfo(posInCycle);
+    let pairs = info.base + Math.floor(info.posInPhase / info.growEvery);
+    pairs = Math.min(pairs, info.max);
+    pairs += Math.min(cycleIndex, 6);
+    pairs = Math.min(pairs, info.max, 12);
+    pairs = Math.max(pairs, 2);
+    return { pairs, phase: info.name, hint: info.hint };
+  }
+
+  function worldIndexForLevel(level){ return Math.min(THEMES.length-1, Math.floor((level-1)/LEVELS_PER_WORLD)); }
+  function isMilestone(level){ return level % 10 === 0; }
+  function isGate(level){ return level % 50 === 0; }
+
+  function previewTimeForLevel(level, pairs){
+    const cycleIndex = Math.floor((level-1) / CYCLE_LENGTH);
+    let t = 3.2 - pairs*0.1 - cycleIndex*0.06;
+    if(isGate(level)) t -= 0.5;
+    return clamp(t, 1.2, 3.2);
+  }
+
+  function chooseGrid(cards){
+    let best = null;
+    for(let cols=3; cols<=6; cols++){
+      const rows = Math.ceil(cards/cols);
+      const empty = rows*cols - cards;
+      const score = empty*10 + Math.abs(cols-rows);
+      if(!best || score < best.score) best = { cols, rows, score };
+    }
+    return best;
+  }
+
+  /* ---------------- Pair builders ---------------- */
+
+  function buildPicturePair(icon){
+    const key = "pic-"+icon;
+    return [ {pairKey:key, display:{type:"emoji", content:icon}}, {pairKey:key, display:{type:"emoji", content:icon}} ];
+  }
+  function buildShapePair(shape){
+    const key = "shp-"+shape;
+    return [ {pairKey:key, display:{type:"emoji", content:shape}}, {pairKey:key, display:{type:"emoji", content:shape}} ];
+  }
+  function buildLetterPair(letter){
+    const key = "let-"+letter;
+    return [ {pairKey:key, display:{type:"text", content:letter, style:"numeral"}}, {pairKey:key, display:{type:"emoji", content:ALPHABET_ICONS[letter]}} ];
+  }
+  function buildNumberPair(n, countIcon){
+    const key = "num-"+n;
+    return [ {pairKey:key, display:{type:"text", content:String(n), style:"numeral"}}, {pairKey:key, display:{type:"count", content:n, icon:countIcon}} ];
+  }
+  function buildMathPair(sum){
+    const a = 1 + Math.floor(Math.random()*(sum-1));
+    const b = sum - a;
+    const key = "math-"+sum;
+    return [ {pairKey:key, display:{type:"text", content:(a+"+"+b), style:"expr"}}, {pairKey:key, display:{type:"text", content:String(sum), style:"numeral"}} ];
+  }
+
+  function genMixedPairsList(pairs, theme){
+    const categories = ["pictures","numbers","letters","shapes","math"];
+    const pools = {
+      pictures: shuffle(theme.icons.slice()),
+      numbers: shuffle(range(1,9)),
+      letters: shuffle(Object.keys(ALPHABET_ICONS)),
+      shapes: shuffle(SHAPES_POOL.slice()),
+      math: shuffle(range(2,9))
+    };
+    let list = [], ci = 0, picked = 0, guard = 0;
+    while(picked < pairs && guard < 300){
+      guard++;
+      const cat = categories[ci % categories.length]; ci++;
+      if(pools[cat].length){
+        const val = pools[cat].shift();
+        if(cat==="pictures") list.push.apply(list, buildPicturePair(val));
+        else if(cat==="numbers") list.push.apply(list, buildNumberPair(val, theme.icons[0]));
+        else if(cat==="letters") list.push.apply(list, buildLetterPair(val));
+        else if(cat==="shapes") list.push.apply(list, buildShapePair(val));
+        else if(cat==="math") list.push.apply(list, buildMathPair(val));
+        picked++;
+      }
+      if(categories.every(c=>pools[c].length===0)) break;
+    }
+    return list;
+  }
+
+  function genPairsForLevel(level, theme){
+    const { pairs, phase } = pairsForLevel(level);
+    let list = [];
+    if(phase==="pictures"){
+      const icons = shuffle(theme.icons.slice()).slice(0, Math.min(pairs, theme.icons.length));
+      icons.forEach(ic=> list.push.apply(list, buildPicturePair(ic)));
+    } else if(phase==="numbers"){
+      const nums = shuffle(range(1,9)).slice(0, Math.min(pairs,9));
+      nums.forEach(n=> list.push.apply(list, buildNumberPair(n, theme.icons[0])));
+    } else if(phase==="letters"){
+      const letters = shuffle(Object.keys(ALPHABET_ICONS)).slice(0, Math.min(pairs,26));
+      letters.forEach(l=> list.push.apply(list, buildLetterPair(l)));
+    } else if(phase==="shapes"){
+      const shapes = shuffle(SHAPES_POOL.slice()).slice(0, Math.min(pairs, SHAPES_POOL.length));
+      shapes.forEach(s=> list.push.apply(list, buildShapePair(s)));
+    } else if(phase==="math"){
+      const sums = shuffle(range(2,9)).slice(0, Math.min(pairs,8));
+      sums.forEach(s=> list.push.apply(list, buildMathPair(s)));
+    } else {
+      list = genMixedPairsList(pairs, theme);
+    }
+    const withMeta = list.map((c,i)=> Object.assign({}, c, { uid:"c"+i+"_"+Math.random().toString(36).slice(2,7), matched:false, flipped:false }));
+    return shuffle(withMeta);
+  }
+
+  /* ---------------- Storage ---------------- */
+
+  function defaultProgress(){
+    const powers = {}; POWER_KEYS.forEach(k=>powers[k]=1);
+    return { highestLevel:1, zenPoints:0, powers, muted:false, bigTiles:false, seenIntro:false };
+  }
+
+  // Three storage tiers, tried in order: window.storage (Claude.ai artifact preview),
+  // then localStorage (packaged app / plain browser), then in-memory only (last resort).
+  let memoryFallback = null;
+
+  async function storageLoad(){
+    try{
+      if(window.storage){
+        const res = await window.storage.get(STORAGE_KEY, false);
+        return res && res.value ? JSON.parse(res.value) : null;
+      }
+    }catch(err){ /* fall through */ }
+    try{
+      if(typeof localStorage !== "undefined"){
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      }
+    }catch(err){ /* fall through */ }
+    return memoryFallback;
+  }
+  async function storageSave(data){
+    memoryFallback = data;
+    try{
+      if(window.storage){
+        const res = await window.storage.set(STORAGE_KEY, JSON.stringify(data), false);
+        return !!res;
+      }
+    }catch(err){ /* fall through */ }
+    try{
+      if(typeof localStorage !== "undefined"){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        return true;
+      }
+    }catch(err){ /* fall through */ }
+    return false;
+  }
+  async function storageClear(){
+    memoryFallback = null;
+    try{ if(window.storage) await window.storage.delete(STORAGE_KEY, false); }catch(err){}
+    try{ if(typeof localStorage !== "undefined") localStorage.removeItem(STORAGE_KEY); }catch(err){}
+  }
+
+  /* ---------------- Audio ---------------- */
+
+  let audioCtx = null;
+  function ensureAudio(){
+    if(audioCtx) return audioCtx;
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(err){ audioCtx=null; }
+    return audioCtx;
+  }
+  function tone(freq, dur, type, delay, gainVal){
+    if(state.progress.muted) return;
+    const ctx = ensureAudio();
+    if(!ctx) return;
+    if(ctx.state==="suspended"){ ctx.resume().catch(function(){}); }
+    try{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type||"sine"; o.frequency.value = freq;
+      o.connect(g); g.connect(ctx.destination);
+      const t0 = ctx.currentTime + (delay||0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(gainVal||0.05, t0+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+(dur||0.15));
+      o.start(t0); o.stop(t0+(dur||0.15)+0.03);
+    }catch(err){}
+  }
+  function chimeFlip(){ tone(320,0.06,"sine",0,0.025); }
+  function chimeMatch(){ tone(660,0.12,"sine",0,0.05); tone(880,0.15,"sine",0.08,0.05); }
+  function chimeMiss(){ tone(260,0.12,"sine",0,0.03); }
+  function chimeComplete(){ [523,659,784,1047].forEach(function(f,i){ tone(f,0.18,"triangle",i*0.12,0.045); }); }
+  function chimePower(){ tone(440,0.1,"sine",0,0.04); tone(560,0.12,"sine",0.06,0.04); }
+
+  /* ---------------- State ---------------- */
+
+  const state = {
+    progress: defaultProgress(),
+    selectedWorld: 0,
+    game: null
+  };
+
+  function q(id){ return document.getElementById(id); }
+
+  /* ---------------- Theme application ---------------- */
+
+  function applyTheme(themeIndex){
+    const t = THEMES[themeIndex];
+    const root = document.documentElement.style;
+    root.setProperty("--grad-from", t.from);
+    root.setProperty("--grad-to", t.to);
+    root.setProperty("--accent", t.accent);
+    root.setProperty("--accent-soft", t.soft);
+  }
+
+  /* ---------------- Toast ---------------- */
+
+  let toastTimer = null;
+  function showToast(msg){
+    const t = q("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2400);
+  }
+
+  /* ---------------- Home rendering ---------------- */
+
+  function unlockedWorld(idx){ return idx===0 || state.progress.highestLevel >= idx*LEVELS_PER_WORLD+1; }
+
+  function renderHome(){
+    applyTheme(state.selectedWorld);
+    q("home-points").textContent = "⭐ " + state.progress.zenPoints;
+    q("continue-level").textContent = state.progress.highestLevel;
+    renderMuteIcons();
+    renderPowersSummary();
+    renderWorldStrip();
+    renderPath();
+  }
+
+  function renderPowersSummary(){
+    const wrap = q("powers-summary");
+    wrap.innerHTML = POWER_KEYS.map(function(k){
+      const info = POWER_INFO[k];
+      const n = state.progress.powers[k]||0;
+      return '<div class="power-chip"><span class="emo">'+info.emo+'</span><b>'+n+'</b></div>';
+    }).join("");
+  }
+
+  function renderWorldStrip(){
+    const wrap = q("world-strip");
+    wrap.innerHTML = THEMES.map(function(t,i){
+      const unlocked = unlockedWorld(i);
+      const active = i===state.selectedWorld;
+      return '<button class="world-btn '+(unlocked?"unlocked":"")+' '+(active?"active":"")+'" data-world="'+i+'">'
+        + '<span class="emo">'+(unlocked ? t.icons[0] : "🔒")+'</span>'
+        + '<span class="lbl">'+(i+1)+'. '+t.name+'</span></button>';
+    }).join("");
+    wrap.querySelectorAll(".world-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        const idx = parseInt(btn.dataset.world,10);
+        if(!unlockedWorld(idx)){
+          showToast("Complete World "+idx+" first to unlock "+THEMES[idx].name+" 🔒");
+          return;
+        }
+        state.selectedWorld = idx;
+        renderHome();
+      });
+    });
+  }
+
+  function renderPath(){
+    const theme = THEMES[state.selectedWorld];
+    q("world-title").textContent = "World " + (state.selectedWorld+1) + " · " + theme.name;
+    q("world-blurb").textContent = worldBlurb(state.selectedWorld);
+
+    const start = state.selectedWorld*LEVELS_PER_WORLD+1;
+    const end = Math.min(start+LEVELS_PER_WORLD-1, TOTAL_LEVELS);
+    const wrap = q("path-wrap");
+    let html = "";
+    for(let lvl=start, i=0; lvl<=end; lvl++, i++){
+      const isDone = lvl < state.progress.highestLevel;
+      const isCurrent = lvl === state.progress.highestLevel;
+      const locked = lvl > state.progress.highestLevel;
+      const milestone = isMilestone(lvl) && !isGate(lvl);
+      const gate = isGate(lvl);
+      const classes = ["node"];
+      if(locked) classes.push("locked");
+      if(isDone) classes.push("done");
+      if(isCurrent) classes.push("current");
+      if(milestone) classes.push("milestone");
+      if(gate) classes.push("gate");
+      const pos = "pos-"+(i%4);
+      let inner;
+      if(gate){ inner = '<span class="glyph">'+theme.icons[1]+'</span><span>'+lvl+'</span>'; }
+      else if(locked){ inner = "🔒"; }
+      else { inner = String(lvl); }
+      const badge = isDone ? '<span class="badge">✓</span>' : "";
+      html += '<div class="node-row '+pos+'"><button class="'+classes.join(" ")+'" data-level="'+lvl+'" '+(locked?"disabled":"")+'>'+inner+badge+'</button></div>';
+    }
+    wrap.innerHTML = html;
+    wrap.querySelectorAll(".node:not([disabled])").forEach(function(btn){
+      btn.addEventListener("click", function(){ startLevel(parseInt(btn.dataset.level,10)); });
+    });
+  }
+
+  function worldBlurb(idx){
+    const blurbs = [
+      "Soft first steps into the garden.",
+      "Waves, shells, and easy breathing.",
+      "Quiet groves and gentle focus.",
+      "Petals drifting, pairs waiting.",
+      "A sky full of slow-moving stars.",
+      "Sun-warmed fruit and easy wins.",
+      "Puddles, rainbows, calm thinking.",
+      "Wide sands, patient matching.",
+      "Crisp air, careful attention.",
+      "Little bugs, bigger focus.",
+      "Sweet colours, sharp memory.",
+      "Woodland pals test your recall.",
+      "Bright reef, brighter thinking.",
+      "Crunchy leaves, cosy challenge.",
+      "Quiet stars, careful minds.",
+      "Party pairs among the blooms.",
+      "Steady trails, steady focus.",
+      "Warm sand, cool concentration.",
+      "Frosty pairs, cosy pace.",
+      "The final, quietest garden."
+    ];
+    return blurbs[idx] || "A calm place to focus.";
+  }
+
+  function renderMuteIcons(){
+    const icon = state.progress.muted ? "🔇" : "🔊";
+    if(q("btn-mute")) q("btn-mute").textContent = icon;
+    if(q("btn-mute-2")) q("btn-mute-2").textContent = icon;
+  }
+
+  /* ---------------- Game screen ---------------- */
+
+  function startLevel(level){
+    const theme = THEMES[worldIndexForLevel(level)];
+    const info = pairsForLevel(level);
+    const pairs = info.pairs, phase = info.phase, hint = info.hint;
+    const cards = genPairsForLevel(level, theme);
+    const grid = chooseGrid(cards.length);
+
+    state.game = {
+      level: level, theme: theme, pairs: pairs, phase: phase, hint: hint,
+      cards: cards, matchedCount:0,
+      flipped:[], locked:true,
+      focusActive:false
+    };
+
+    applyTheme(worldIndexForLevel(level));
+    q("game-level-label").textContent = "Level " + level + (isGate(level) ? " · Gate" : (isMilestone(level) ? " · Milestone" : ""));
+    q("game-points").textContent = "⭐ " + state.progress.zenPoints;
+    q("phase-hint").textContent = hint;
+    renderMuteIcons();
+    renderPowersDock();
+
+    const board = q("board");
+    board.style.gridTemplateColumns = "repeat(" + grid.cols + ",1fr)";
+    board.innerHTML = cards.map(function(c){ return cardHTML(c, true); }).join("");
+    updateProgressNote();
+
+    showScreen("game");
+
+    const previewMs = previewTimeForLevel(level, pairs) * 1000;
+    setTimeout(function(){
+      if(!state.game || state.game.level!==level) return;
+      board.querySelectorAll(".card").forEach(function(cd){ cd.classList.remove("flipped"); });
+      state.game.locked = false;
+    }, previewMs);
+
+    attachBoardEvents();
+  }
+
+  function cardHTML(card, faceUp){
+    return '<div class="card '+(faceUp?"flipped":"")+' '+(card.matched?"matched":"")+'" data-uid="'+card.uid+'">'
+      + '<div class="card-inner">'
+      + '<div class="card-face front"><span class="mark">✦</span></div>'
+      + '<div class="card-face back">'+faceContentHTML(card.display)+'</div>'
+      + '</div></div>';
+  }
+  function faceContentHTML(d){
+    if(d.type==="emoji") return '<span class="tile-emoji">'+d.content+'</span>';
+    if(d.type==="text") return '<span class="tile-text '+(d.style||"")+'">'+d.content+'</span>';
+    if(d.type==="count"){
+      const size = d.content>6 ? "13px" : (d.content>4 ? "16px" : "20px");
+      let inner = "";
+      for(let i=0;i<d.content;i++) inner += '<span style="font-size:'+size+'">'+d.icon+'</span>';
+      return '<div class="tile-count">'+inner+'</div>';
+    }
+    return "";
+  }
+
+  function attachBoardEvents(){
+    q("board").onclick = function(e){
+      const cardEl2 = e.target.closest(".card");
+      if(!cardEl2) return;
+      onCardClick(cardEl2.dataset.uid);
+    };
+  }
+
+  function findCard(uid){ return state.game.cards.filter(function(c){ return c.uid===uid; })[0]; }
+  function cardEl(uid){ return q("board").querySelector('.card[data-uid="'+uid+'"]'); }
+
+  function onCardClick(uid){
+    const g = state.game;
+    if(!g || g.locked) return;
+    const card = findCard(uid);
+    if(!card || card.matched || card.flipped) return;
+    if(g.flipped.length>=2) return;
+
+    card.flipped = true;
+    cardEl(uid).classList.add("flipped");
+    chimeFlip();
+    g.flipped.push(uid);
+
+    if(g.flipped.length===2){
+      g.locked = true;
+      const u1 = g.flipped[0], u2 = g.flipped[1];
+      const c1 = findCard(u1), c2 = findCard(u2);
+      if(c1.pairKey===c2.pairKey){
+        setTimeout(function(){
+          c1.matched = true; c2.matched = true;
+          cardEl(u1).classList.add("matched");
+          cardEl(u2).classList.add("matched");
+          chimeMatch();
+          g.matchedCount++;
+          g.flipped = [];
+          g.locked = false;
+          updateProgressNote();
+          if(g.matchedCount===g.pairs) completeLevel();
+        }, 260);
+      } else {
+        setTimeout(function(){
+          cardEl(u1).classList.add("shake");
+          cardEl(u2).classList.add("shake");
+          chimeMiss();
+        }, 200);
+        setTimeout(function(){
+          c1.flipped = false; c2.flipped = false;
+          const e1=cardEl(u1), e2=cardEl(u2);
+          if(e1){ e1.classList.remove("flipped","shake"); }
+          if(e2){ e2.classList.remove("flipped","shake"); }
+          g.flipped = [];
+          g.locked = false;
+        }, 900);
+      }
+    }
+  }
+
+  function updateProgressNote(){
+    q("progress-note").textContent = "Pairs found: " + state.game.matchedCount + " / " + state.game.pairs;
+  }
+
+  /* ---------------- Powers ---------------- */
+
+  function renderPowersDock(){
+    const wrap = q("powers-dock");
+    wrap.innerHTML = POWER_KEYS.map(function(k){
+      const info = POWER_INFO[k];
+      const n = state.progress.powers[k]||0;
+      return '<button class="power-btn" data-power="'+k+'" '+(n<=0?"disabled":"")+'>'
+        + '<span class="emo">'+info.emo+'</span><span class="count">'+n+'</span></button>';
+    }).join("");
+    wrap.querySelectorAll(".power-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){ usePower(btn.dataset.power); });
+    });
+  }
+
+  function usePower(type){
+    const g = state.game;
+    if(!g) return;
+    const count = state.progress.powers[type]||0;
+    if(count<=0){
+      showToast("No " + POWER_INFO[type].name + " left — clear more levels to earn one!");
+      return;
+    }
+    if(type==="focus" && g.focusActive){
+      showToast("Focus Boost is already active for this level ⭐");
+      return;
+    }
+    if(g.locked && type!=="lucky"){
+      return;
+    }
+
+    if(type==="peek"){
+      g.locked = true;
+      q("board").querySelectorAll(".card").forEach(function(cd){
+        const c = findCard(cd.dataset.uid);
+        if(!c.matched && !c.flipped) cd.classList.add("flipped");
+      });
+      chimePower();
+      setTimeout(function(){
+        q("board").querySelectorAll(".card").forEach(function(cd){
+          const c = findCard(cd.dataset.uid);
+          if(!c.matched && !c.flipped) cd.classList.remove("flipped");
+        });
+        g.locked = false;
+      }, 1200);
+    } else if(type==="reshuffle"){
+      const openUids = g.flipped.slice();
+      openUids.forEach(function(u){ const c=findCard(u); c.flipped=false; const e=cardEl(u); if(e) e.classList.remove("flipped"); });
+      g.flipped = [];
+      const unmatched = g.cards.filter(function(c){ return !c.matched; });
+      const contents = shuffle(unmatched.map(function(c){ return {pairKey:c.pairKey, display:c.display}; }));
+      unmatched.forEach(function(c,i){
+        c.pairKey = contents[i].pairKey; c.display = contents[i].display;
+        const backFace = cardEl(c.uid).querySelector(".card-face.back");
+        backFace.innerHTML = faceContentHTML(c.display);
+      });
+      chimePower();
+      showToast("Shuffled the board 🔀");
+    } else if(type==="focus"){
+      g.focusActive = true;
+      chimePower();
+      showToast("Focus Boost active — double points this level ⭐");
+    } else if(type==="lucky"){
+      const candidates = {};
+      g.cards.forEach(function(c){ if(!c.matched){ (candidates[c.pairKey]=candidates[c.pairKey]||[]).push(c); } });
+      const pairArrays = Object.keys(candidates).map(function(k){ return candidates[k]; }).filter(function(a){ return a.length===2 && !a[0].flipped && !a[1].flipped; });
+      if(pairArrays.length===0){
+        showToast("No free pairs left to reveal 🍀");
+        return;
+      }
+      const pick = pairArrays[Math.floor(Math.random()*pairArrays.length)];
+      pick.forEach(function(c){ c.matched=true; const e=cardEl(c.uid); if(e){ e.classList.add("flipped","matched"); } });
+      chimeMatch();
+      g.matchedCount++;
+      updateProgressNote();
+      if(g.matchedCount===g.pairs){
+        state.progress.powers[type] = count-1;
+        renderPowersDock();
+        storageSave(state.progress);
+        completeLevel();
+        return;
+      }
+    }
+
+    state.progress.powers[type] = count-1;
+    renderPowersDock();
+    storageSave(state.progress);
+  }
+
+  /* ---------------- Level completion ---------------- */
+
+  function rewardsForLevel(level){
+    if(isGate(level)) return POWER_KEYS.slice();
+    if(isMilestone(level)) return [randomPowerType(), randomPowerType()];
+    if(level % 3 === 0) return [randomPowerType()];
+    return [];
+  }
+
+  function completeLevel(){
+    const g = state.game;
+    let points = g.pairs * 10;
+    if(isGate(g.level)) points += 50;
+    else if(isMilestone(g.level)) points += 20;
+    if(g.focusActive) points *= 2;
+
+    const rewards = rewardsForLevel(g.level);
+    rewards.forEach(function(k){ state.progress.powers[k] = (state.progress.powers[k]||0)+1; });
+    state.progress.zenPoints += points;
+    if(g.level === state.progress.highestLevel) state.progress.highestLevel = g.level+1;
+    storageSave(state.progress);
+
+    chimeComplete();
+
+    q("complete-title").textContent = isGate(g.level) ? "World Gate cleared! 🌟" : (isMilestone(g.level) ? "Milestone cleared! 🌸" : "Lovely work! 🌿");
+    q("complete-sub").textContent = "Level " + g.level + " · " + g.theme.name;
+    q("stat-points").textContent = "+" + points;
+    q("stat-total").textContent = state.progress.zenPoints;
+    q("earned-powers").innerHTML = rewards.length
+      ? rewards.map(function(k){ return '<span>'+POWER_INFO[k].emo+' '+POWER_INFO[k].name+'</span>'; }).join("")
+      : '<span style="opacity:.6">No power this time — next one is close!</span>';
+
+    spawnConfetti(g.theme);
+    openModal("modal-complete");
+  }
+
+  function spawnConfetti(theme){
+    const layer = q("confetti-layer");
+    layer.innerHTML = "";
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(reduced) return;
+    for(let i=0;i<14;i++){
+      const span = document.createElement("span");
+      span.className = "confetti-piece";
+      span.textContent = theme.icons[Math.floor(Math.random()*theme.icons.length)];
+      span.style.left = (5+Math.random()*90)+"%";
+      span.style.animationDuration = (1.6+Math.random()*1.2)+"s";
+      span.style.animationDelay = (Math.random()*0.4)+"s";
+      layer.appendChild(span);
+    }
+  }
+
+  /* ---------------- Screens & modals ---------------- */
+
+  function showScreen(name){
+    q("screen-home").hidden = name!=="home";
+    q("screen-game").hidden = name!=="game";
+  }
+  function openModal(id){ q(id).hidden = false; }
+  function closeModal(id){ q(id).hidden = true; }
+
+  /* ---------------- Event wiring ---------------- */
+
+  function wireEvents(){
+    q("btn-continue").addEventListener("click", function(){ startLevel(state.progress.highestLevel); });
+    q("btn-mute").addEventListener("click", toggleMute);
+    q("btn-mute-2").addEventListener("click", toggleMute);
+    q("btn-settings").addEventListener("click", function(){ syncSettingsUI(); openModal("modal-settings"); });
+    q("btn-settings-close").addEventListener("click", function(){ closeModal("modal-settings"); });
+    q("btn-back-home").addEventListener("click", function(){
+      state.game=null;
+      state.selectedWorld = worldIndexForLevel(state.progress.highestLevel);
+      renderHome();
+      showScreen("home");
+    });
+
+    q("btn-intro-start").addEventListener("click", function(){
+      state.progress.seenIntro = true;
+      storageSave(state.progress);
+      closeModal("modal-intro");
+    });
+
+    q("btn-next-level").addEventListener("click", function(){
+      closeModal("modal-complete");
+      const next = state.game.level+1;
+      if(next>TOTAL_LEVELS){ openModal("modal-finale"); return; }
+      startLevel(next);
+    });
+    q("btn-to-map").addEventListener("click", function(){
+      closeModal("modal-complete");
+      state.selectedWorld = worldIndexForLevel(state.game.level);
+      state.game = null;
+      renderHome();
+      showScreen("home");
+    });
+    q("btn-finale-close").addEventListener("click", function(){
+      closeModal("modal-finale");
+      state.selectedWorld = worldIndexForLevel(TOTAL_LEVELS);
+      renderHome();
+      showScreen("home");
+    });
+
+    q("switch-mute").addEventListener("click", function(){
+      state.progress.muted = !state.progress.muted;
+      syncSettingsUI(); renderMuteIcons(); storageSave(state.progress);
+    });
+    q("switch-big").addEventListener("click", function(){
+      state.progress.bigTiles = !state.progress.bigTiles;
+      document.body.style.setProperty("--tile-scale", state.progress.bigTiles ? "1.15" : "1");
+      syncSettingsUI(); storageSave(state.progress);
+    });
+    q("btn-reset").addEventListener("click", onResetClick);
+  }
+
+  function toggleMute(){
+    state.progress.muted = !state.progress.muted;
+    renderMuteIcons();
+    storageSave(state.progress);
+  }
+
+  function syncSettingsUI(){
+    q("switch-mute").classList.toggle("on", state.progress.muted);
+    q("switch-mute").setAttribute("aria-checked", String(state.progress.muted));
+    q("switch-big").classList.toggle("on", state.progress.bigTiles);
+    q("switch-big").setAttribute("aria-checked", String(state.progress.bigTiles));
+  }
+
+  let resetArmed = false, resetTimer = null;
+  function onResetClick(){
+    const btn = q("btn-reset");
+    if(!resetArmed){
+      resetArmed = true;
+      btn.textContent = "Tap again to confirm";
+      resetTimer = setTimeout(function(){ resetArmed=false; btn.textContent="Reset progress"; }, 4000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    resetArmed = false;
+    btn.textContent = "Reset progress";
+    state.progress = defaultProgress();
+    state.progress.seenIntro = true;
+    storageClear().then(function(){ storageSave(state.progress); });
+    state.selectedWorld = 0;
+    closeModal("modal-settings");
+    renderHome();
+    showScreen("home");
+    showToast("Your garden has been reset 🌱");
+  }
+
+  /* ---------------- Init ---------------- */
+
+  async function init(){
+    wireEvents();
+    const saved = await storageLoad();
+    if(saved){
+      const dp = defaultProgress();
+      state.progress = Object.assign(dp, saved, { powers: Object.assign(dp.powers, saved.powers||{}) });
+    }
+    state.selectedWorld = worldIndexForLevel(state.progress.highestLevel);
+
+    q("loading").hidden = true;
+    q("app").hidden = false;
+    renderHome();
+    showScreen("home");
+
+    if(!state.progress.seenIntro){
+      openModal("modal-intro");
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

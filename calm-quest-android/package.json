@@ -1,0 +1,18 @@
+{
+  "name": "calm-quest",
+  "version": "1.0.0",
+  "description": "Calm Quest — a gentle, 999-level memory-matching game for stress relief and kids' brain development. Android project powered by Capacitor.",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync android",
+    "open:android": "cap open android",
+    "build:debug": "cd android && ./gradlew assembleDebug",
+    "build:release": "cd android && ./gradlew bundleRelease"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  }
+}
