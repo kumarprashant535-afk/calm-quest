@@ -27,14 +27,18 @@ jobs:
         java-version: '11'
 
     - name: Install dependencies
-      run: npm install
+      run: |
+        cd calm-quest-android
+        npm install
 
     - name: Sync Capacitor
-      run: npx cap sync android
+      run: |
+        cd calm-quest-android
+        npx cap sync android
 
     - name: Build debug APK
       run: |
-        cd android
+        cd calm-quest-android/android
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon
 
@@ -42,13 +46,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        path: calm-quest-android/android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 30
-
-    - name: Create Release (if tagged)
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: android/app/build/outputs/apk/debug/app-debug.apk
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
